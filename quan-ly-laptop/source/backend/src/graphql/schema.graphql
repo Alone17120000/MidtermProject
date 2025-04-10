@@ -10,10 +10,16 @@ type Laptop {
   updatedAt: String    # Thêm trường timestamp nếu muốn trả về
 }
 
-# Định nghĩa các truy vấn (lấy dữ liệu)
 type Query {
-  # Lấy danh sách tất cả laptop
-  laptops: [Laptop!]! # Trả về một mảng các Laptop, mảng và phần tử đều không được null
+  # Query laptops ĐÃ CẬP NHẬT
+  laptops(
+    page: Int = 1             # Trang hiện tại, mặc định là 1
+    limit: Int = 5            # Số lượng item mỗi trang, mặc định 5 (dễ test)
+    sortBy: LaptopSortBy = NAME # Sắp xếp theo trường nào, mặc định là NAME
+    sortOrder: SortOrder = ASC  # Thứ tự sắp xếp, mặc định là ASC
+    filter: LaptopFilterInput    # Bộ lọc (tùy chọn)
+    search: String              # Chuỗi tìm kiếm theo tên (tùy chọn)
+  ): LaptopsPage # <--- Kiểu trả về mới
 
   # Lấy thông tin một laptop theo ID
   laptop(id: ID!): Laptop # Truyền vào id bắt buộc, trả về một Laptop hoặc null nếu không tìm thấy
@@ -55,4 +61,27 @@ type Laptop {
   imageUrl: String    # <--- THÊM DÒNG NÀY (kiểu String, cho phép null)
   createdAt: String
   updatedAt: String
+}
+# Enum cho các trường có thể sắp xếp
+enum LaptopSortBy {
+  NAME
+  PRICE_PER_HOUR
+}
+
+# Enum cho thứ tự sắp xếp
+enum SortOrder {
+  ASC  # Tăng dần
+  DESC # Giảm dần
+}
+
+# Input Type cho bộ lọc
+input LaptopFilterInput {
+  minPrice: Float # Giá tối thiểu (tùy chọn)
+  maxPrice: Float # Giá tối đa (tùy chọn)
+}
+
+# Kiểu trả về mới cho query laptops (bao gồm danh sách và tổng số lượng)
+type LaptopsPage {
+  laptops: [Laptop!]! # Danh sách laptop của trang hiện tại
+  totalCount: Int!     # Tổng số laptop khớp với điều kiện lọc/tìm kiếm
 }

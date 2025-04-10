@@ -7,68 +7,126 @@ const { Types } = require('mongoose'); // Import Types để kiểm tra ObjectId
 const resolvers = {
   // Resolvers cho các Query
   Query: {
-    // Resolver cho query 'laptops'
-    laptops: async () => {
+
+    // --- HÀM RESOLVER laptops MỚI (Thay thế hoàn toàn hàm cũ) ---
+    laptops: async (_, args) => {
+      // Lấy các arguments với giá trị mặc định nếu không được cung cấp
+      const {
+        page = 1,
+        limit = 5, // Đặt lại limit mặc định là 5 như trong schema
+        sortBy = 'NAME', // Giá trị enum từ GQL Schema
+        sortOrder = 'ASC', // Giá trị enum từ GQL Schema
+        filter,        // Object chứa minPrice, maxPrice (có thể undefined)
+        search         // Chuỗi tìm kiếm (có thể undefined)
+      } = args;
+
       try {
-        // Tìm tất cả các document trong collection 'laptops'
-        const laptops = await Laptop.find();
-        return laptops;
+        // --- 1. Input Validation (Cơ bản) ---
+        const pageInt = Math.max(1, parseInt(page, 10) || 1);
+        const limitInt = Math.max(1, parseInt(limit, 10) || 5);
+        const skip = (pageInt - 1) * limitInt; // Số lượng documents cần bỏ qua
+
+        // --- 2. Xây dựng điều kiện tìm kiếm (findCriteria) ---
+        const findCriteria = {}; // Bắt đầu với object rỗng
+
+        // Tìm kiếm theo Tên (search) - không phân biệt hoa thường
+        if (search && typeof search === 'string' && search.trim() !== '') {
+          const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          findCriteria.name = { $regex: escapedSearch.trim(), $options: 'i' };
+        }
+
+        // Lọc theo khoảng giá (filter)
+        if (filter) {
+          const priceFilter = {};
+          if (filter.minPrice !== null && typeof filter.minPrice === 'number') {
+            priceFilter.$gte = filter.minPrice; // $gte = greater than or equal
+          }
+          if (filter.maxPrice !== null && typeof filter.maxPrice === 'number') {
+            if (priceFilter.$gte === undefined || filter.maxPrice >= priceFilter.$gte) {
+               priceFilter.$lte = filter.maxPrice; // $lte = less than or equal
+            } else {
+               console.warn("Warning: maxPrice is less than minPrice. Ignoring maxPrice filter.");
+            }
+          }
+          // Chỉ thêm điều kiện pricePerHour nếu có min hoặc max
+          if (Object.keys(priceFilter).length > 0) {
+            findCriteria.pricePerHour = priceFilter;
+          }
+          // Thêm các điều kiện lọc khác ở đây nếu cần (vd: filter.minRam...)
+        }
+
+        // --- 3. Xây dựng tùy chọn sắp xếp (sortOptions) ---
+        const sortOptions = {};
+        let sortField = 'name'; // Trường sắp xếp mặc định trong DB
+        if (sortBy === 'PRICE_PER_HOUR') {
+          sortField = 'pricePerHour';
+        }
+        // Thêm các trường hợp khác nếu enum LaptopSortBy có thêm giá trị
+
+        const order = (sortOrder === 'DESC') ? -1 : 1; // 1 = ASC, -1 = DESC
+        sortOptions[sortField] = order;
+        // Có thể thêm sắp xếp phụ, ví dụ luôn xếp theo tên nếu giá bằng nhau
+        // if (sortField !== 'name') { sortOptions['name'] = 1; }
+
+        // --- 4. Thực thi Query vào DB ---
+        // Query 1: Đếm tổng số document khớp điều kiện (cho phân trang)
+        const totalCount = await Laptop.countDocuments(findCriteria);
+
+        // Query 2: Lấy danh sách laptop đã lọc, sắp xếp, phân trang
+        const laptops = await Laptop.find(findCriteria) // Áp dụng lọc/tìm kiếm
+          .sort(sortOptions)                         // Áp dụng sắp xếp
+          .skip(skip)                                // Bỏ qua các trang trước
+          .limit(limitInt);                          // Giới hạn số lượng kết quả
+
+        // --- 5. Trả về kết quả đúng cấu trúc LaptopsPage ---
+        return {
+          laptops: laptops,
+          totalCount: totalCount,
+        };
+
       } catch (err) {
         console.error('Error fetching laptops:', err);
-        // Ném lỗi để Apollo Server biết có vấn đề xảy ra
         throw new Error('Failed to fetch laptops');
       }
-    },
+    }, // --- Kết thúc hàm resolver laptops MỚI ---
 
-    // Resolver cho query 'laptop' (lấy theo ID)
-    // Tham số thứ hai (args) chứa các đối số truyền vào query (ở đây là { id })
+    // Giữ nguyên resolver cũ cho query 'laptop(id: ID!)'
     laptop: async (_, { id }) => {
       try {
-         // Kiểm tra xem ID có phải là ObjectId hợp lệ không
          if (!Types.ObjectId.isValid(id)) {
             throw new Error('Invalid Laptop ID format');
          }
-        // Tìm laptop theo _id trong MongoDB
         const laptop = await Laptop.findById(id);
         if (!laptop) {
-          // Nếu không tìm thấy, ném lỗi (Apollo sẽ trả về null và errors)
           throw new Error('Laptop not found');
         }
         return laptop;
       } catch (err) {
         console.error(`Error fetching laptop with id ${id}:`, err);
-        // Ném lỗi lại để client biết
-         // Check xem có phải lỗi do mình throw không hay lỗi khác
          if (err.message === 'Laptop not found' || err.message === 'Invalid Laptop ID format') {
             throw err;
          }
         throw new Error('Failed to fetch laptop');
       }
-    },
-  },
+    }, // Kết thúc laptop(id: ID!)
 
-  // Resolvers cho các Mutation
+  }, // Kết thúc Query block
+
+  // Resolvers cho các Mutation (Đã cập nhật imageUrl ở bước trước)
   Mutation: {
-    // Resolver cho mutation 'createLaptop'
-    // Tham số thứ hai (args) chứa đối số 'input'
     createLaptop: async (_, { input }) => {
       try {
-        // Tạo một instance mới của Laptop model với dữ liệu từ input
         const newLaptop = new Laptop({
           name: input.name,
           configuration: input.configuration,
           pricePerHour: input.pricePerHour,
-          imageUrl: input.imageUrl
+          imageUrl: input.imageUrl // Đã thêm ở bước trước
         });
-        // Lưu vào database
         await newLaptop.save();
-        // Trả về laptop vừa tạo
         return newLaptop;
       } catch (err) {
         console.error('Error creating laptop:', err);
-         // Kiểm tra lỗi validation từ Mongoose
         if (err.name === 'ValidationError') {
-            // Lấy thông điệp lỗi đầu tiên cho đơn giản
             const message = Object.values(err.errors).map(e => e.message).join(', ');
             throw new Error(`Validation failed: ${message}`);
         }
@@ -76,19 +134,15 @@ const resolvers = {
       }
     },
 
-    // Resolver cho mutation 'updateLaptop'
-    // Tham số thứ hai (args) chứa 'id' và 'input'
     updateLaptop: async (_, { id, input }) => {
       try {
         if (!Types.ObjectId.isValid(id)) {
            throw new Error('Invalid Laptop ID format');
         }
-        // Tìm và cập nhật laptop theo ID
-        // { new: true } để trả về document sau khi đã cập nhật
-        // runValidators: true để chạy lại các validation của Mongoose schema khi update
+        // $set: input sẽ tự động xử lý imageUrl nếu có trong input
         const updatedLaptop = await Laptop.findByIdAndUpdate(
           id,
-          { $set: input }, // Chỉ cập nhật các trường có trong input
+          { $set: input },
           { new: true, runValidators: true }
         );
         if (!updatedLaptop) {
@@ -108,18 +162,15 @@ const resolvers = {
       }
     },
 
-    // Resolver cho mutation 'deleteLaptop'
     deleteLaptop: async (_, { id }) => {
       try {
         if (!Types.ObjectId.isValid(id)) {
            throw new Error('Invalid Laptop ID format');
         }
-        // Tìm và xóa laptop theo ID
         const deletedLaptop = await Laptop.findByIdAndDelete(id);
         if (!deletedLaptop) {
           throw new Error('Laptop not found, cannot delete');
         }
-        // Trả về thông tin laptop đã xóa để xác nhận
         return deletedLaptop;
       } catch (err) {
         console.error(`Error deleting laptop with id ${id}:`, err);
@@ -129,16 +180,14 @@ const resolvers = {
         throw new Error('Failed to delete laptop');
       }
     },
-  },
+  }, // Kết thúc Mutation block
 
-   // Resolver cho các trường của Type Laptop (nếu cần tùy chỉnh)
-   // Ví dụ: Đảm bảo createdAt và updatedAt trả về đúng định dạng nếu cần
+   // Resolver cho các trường của Type Laptop (Đã cập nhật ở bước trước)
    Laptop: {
        createdAt: (parent) => parent.createdAt ? parent.createdAt.toISOString() : null,
        updatedAt: (parent) => parent.updatedAt ? parent.updatedAt.toISOString() : null,
-       // Trường 'id' thường được Mongoose tự động xử lý khi có toJSON/toObject virtuals
-       // id: (parent) => parent._id.toString(), // Không cần thiết nếu đã cấu hình virtual trong schema
+       // id đã được xử lý bởi toJSON/toObject virtuals trong Model
    }
-};
+}; // Kết thúc const resolvers
 
 module.exports = resolvers;

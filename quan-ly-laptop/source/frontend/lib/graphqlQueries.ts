@@ -4,13 +4,33 @@ import { gql } from '@apollo/client';
 // Query để lấy danh sách tất cả laptops
 // Chỉ lấy các trường cần thiết cho trang danh sách
 export const GET_LAPTOPS = gql`
-  query GetLaptops {
-    laptops {
-      id
-      name
-      configuration
-      pricePerHour
-      imageUrl
+  query GetLaptops(
+    $page: Int
+    $limit: Int
+    $sortBy: LaptopSortBy
+    $sortOrder: SortOrder
+    $filter: LaptopFilterInput
+    $search: String
+  ) {
+    # Đổi tên truy vấn để khớp cấu trúc trả về mới từ backend
+    laptopsPage(
+      page: $page
+      limit: $limit
+      sortBy: $sortBy
+      sortOrder: $sortOrder
+      filter: $filter
+      search: $search
+    ) {
+      # Dữ liệu cần lấy cho mỗi laptop (giữ nguyên)
+      laptops {
+        id
+        name
+        configuration
+        pricePerHour
+        imageUrl
+      }
+      # Lấy thêm tổng số lượng
+      totalCount
     }
   }
 `;
