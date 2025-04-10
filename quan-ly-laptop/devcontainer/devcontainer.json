@@ -1,0 +1,42 @@
+{
+    "name": "Node.js & MongoDB Project",
+    // Chọn một image Node.js phù hợp, ví dụ:
+    "image": "mcr.microsoft.com/devcontainers/typescript-node:18",
+  
+    "features": {
+      // **** THÊM DÒNG NÀY ĐỂ CÀI MONGODB ****
+      "ghcr.io/devcontainers/features/mongodb:1": {}
+      // ******************************************
+    },
+  
+    // Forward các cổng cần thiết cho ứng dụng (ví dụ: backend, frontend)
+    // Cổng 27017 của MongoDB chạy bên trong không cần forward ra ngoài
+    "forwardPorts": [
+        4000, // Cổng cho backend GraphQL
+        3000  // Cổng cho frontend (nếu có)
+    ],
+  
+    // Tùy chọn: Chạy lệnh sau khi container được tạo/mở lại
+    // Ví dụ: tự động cài đặt dependencies cho cả backend và frontend
+     "postCreateCommand": "cd source/backend && npm install", // Di chuyển vào backend và cài đặt
+    // "postAttachCommand": {
+    //     "server": "cd source/backend && npm run dev" // Tự động chạy backend khi mở codespace
+    // },
+  
+  
+    // Cấu hình VS Code settings và extensions nếu muốn
+    "customizations": {
+      "vscode": {
+        "settings": {},
+        "extensions": [
+          "dbaeumer.vscode-eslint",
+          "esbenp.prettier-vscode",
+          "apollographql.vscode-apollo" // Extension hữu ích cho GraphQL
+          // Thêm các extension khác bạn cần
+        ]
+      }
+    }
+  
+    // Chạy lệnh với user 'node' thay vì 'root' (thực hành tốt)
+    //"remoteUser": "node"
+}

@@ -1,0 +1,46 @@
+# src/graphql/schema.graphql
+
+# Định nghĩa kiểu dữ liệu cho Laptop
+type Laptop {
+  id: ID!          # ID duy nhất, kiểu ID là chuỗi (string) trong GraphQL nhưng thường map với _id của MongoDB
+  name: String!    # Dấu ! nghĩa là trường này bắt buộc (non-nullable)
+  configuration: String!
+  pricePerHour: Float! # Sử dụng Float cho số thực, hoặc Int nếu giá luôn là số nguyên
+  createdAt: String    # Thêm trường timestamp nếu muốn trả về
+  updatedAt: String    # Thêm trường timestamp nếu muốn trả về
+}
+
+# Định nghĩa các truy vấn (lấy dữ liệu)
+type Query {
+  # Lấy danh sách tất cả laptop
+  laptops: [Laptop!]! # Trả về một mảng các Laptop, mảng và phần tử đều không được null
+
+  # Lấy thông tin một laptop theo ID
+  laptop(id: ID!): Laptop # Truyền vào id bắt buộc, trả về một Laptop hoặc null nếu không tìm thấy
+}
+
+# Định nghĩa input type cho việc tạo mới Laptop (gom các trường cần thiết)
+input CreateLaptopInput {
+  name: String!
+  configuration: String!
+  pricePerHour: Float!
+}
+
+# Định nghĩa input type cho việc cập nhật Laptop (các trường đều là tùy chọn)
+input UpdateLaptopInput {
+  name: String
+  configuration: String
+  pricePerHour: Float
+}
+
+# Định nghĩa các thay đổi dữ liệu (thêm, sửa, xóa)
+type Mutation {
+  # Tạo một laptop mới
+  createLaptop(input: CreateLaptopInput!): Laptop! # Nhận đầu vào là CreateLaptopInput, trả về Laptop mới được tạo
+
+  # Cập nhật một laptop theo ID
+  updateLaptop(id: ID!, input: UpdateLaptopInput!): Laptop # Nhận id và dữ liệu cập nhật, trả về Laptop đã cập nhật (hoặc null nếu không tìm thấy)
+
+  # Xóa một laptop theo ID
+  deleteLaptop(id: ID!): Laptop # Nhận id, trả về Laptop đã bị xóa (để xác nhận, hoặc có thể trả về kiểu khác như Boolean)
+}
