@@ -24,6 +24,7 @@ input CreateLaptopInput {
   name: String!
   configuration: String!
   pricePerHour: Float!
+  imageUrl: String 
 }
 
 # Định nghĩa input type cho việc cập nhật Laptop (các trường đều là tùy chọn)
@@ -31,6 +32,7 @@ input UpdateLaptopInput {
   name: String
   configuration: String
   pricePerHour: Float
+  imageUrl: String
 }
 
 # Định nghĩa các thay đổi dữ liệu (thêm, sửa, xóa)
@@ -43,4 +45,14 @@ type Mutation {
 
   # Xóa một laptop theo ID
   deleteLaptop(id: ID!): Laptop # Nhận id, trả về Laptop đã bị xóa (để xác nhận, hoặc có thể trả về kiểu khác như Boolean)
+}
+
+type Laptop {
+  id: ID!
+  name: String!
+  configuration: String!
+  pricePerHour: Float!
+  imageUrl: String    # <--- THÊM DÒNG NÀY (kiểu String, cho phép null)
+  createdAt: String
+  updatedAt: String
 }

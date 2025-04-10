@@ -10,6 +10,7 @@ export const GET_LAPTOPS = gql`
       name
       configuration
       pricePerHour
+      imageUrl
     }
   }
 `;
@@ -23,6 +24,7 @@ export const GET_LAPTOP_BY_ID = gql`
       name
       configuration
       pricePerHour
+      imageUrl
       createdAt # Có thể lấy thêm nếu cần hiển thị
       updatedAt # Có thể lấy thêm nếu cần hiển thị
     }
@@ -39,6 +41,7 @@ export const CREATE_LAPTOP = gql`
       name
       configuration
       pricePerHour
+      imageUrl
     }
   }
 `;
@@ -54,6 +57,7 @@ export const UPDATE_LAPTOP = gql`
       name
       configuration
       pricePerHour
+      imageUrl
     }
   }
 `;
@@ -68,3 +72,4 @@ export const DELETE_LAPTOP = gql`
     }
   }
 `;
+

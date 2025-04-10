@@ -17,6 +17,11 @@ const LaptopSchema = new mongoose.Schema(
       required: [true, 'Price per hour is required'],
       min: [0, 'Price cannot be negative'], // Giá không thể âm
     },
+    imageUrl: {
+      type: String,     // Kiểu dữ liệu là chuỗi (để lưu URL)
+      required: false,    // Không bắt buộc phải có ảnh
+      trim: true        // Loại bỏ khoảng trắng thừa ở URL
+    }
   },
   {
     // Tự động thêm trường createdAt và updatedAt

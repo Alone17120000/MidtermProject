@@ -18,12 +18,13 @@ import {
 import { Button } from "@/components/ui/button"; // Import button
 import { Skeleton } from "@/components/ui/skeleton"; // Import skeleton cho loading
 
-// Định nghĩa kiểu dữ liệu Laptop (khớp với query GET_LAPTOPS)
+// Định nghĩa kiểu dữ liệu Laptop (đã thêm imageUrl)
 interface Laptop {
   id: string;
   name: string;
   configuration: string;
   pricePerHour: number;
+  imageUrl?: string; // Đã thêm trường này
 }
 
 export default function LaptopsPage() {
@@ -36,7 +37,7 @@ export default function LaptopsPage() {
     router.push(`/laptops/${id}`); // Điều hướng đến trang chi tiết
   };
 
-  // --- Xử lý trạng thái Loading ---
+  // --- Xử lý trạng thái Loading (Đã cập nhật Skeleton) ---
   if (loading) {
     return (
       <div className="container mx-auto p-4">
@@ -48,17 +49,23 @@ export default function LaptopsPage() {
             <Table>
                 <TableHeader>
                     <TableRow>
+                        {/* Thêm cột Skeleton cho Image */}
+                        <TableHead className="w-[100px]">Image</TableHead>
                         <TableHead>Name</TableHead>
                         <TableHead>Configuration</TableHead>
-                        <TableHead>Price/Hour (VND)</TableHead>
+                        <TableHead className="text-right">Price/Hour</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {[...Array(5)].map((_, index) => ( // Hiện 5 dòng skeleton
                         <TableRow key={index}>
+                            {/* Thêm Cell Skeleton cho Image */}
+                            <TableCell>
+                                <Skeleton className="h-16 w-24 rounded-md" />
+                            </TableCell>
                             <TableCell><Skeleton className="h-4 w-[150px]" /></TableCell>
                             <TableCell><Skeleton className="h-4 w-[250px]" /></TableCell>
-                            <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
+                            <TableCell className="text-right"><Skeleton className="h-4 w-[100px] float-right" /></TableCell>
                         </TableRow>
                     ))}
                 </TableBody>
@@ -68,9 +75,7 @@ export default function LaptopsPage() {
     );
   }
 
-  // --- Xử lý trạng thái Error ---
-  // !!! LƯU Ý: Hiện tại chúng ta RẤT CÓ KHẢ NĂNG sẽ thấy lỗi này !!!
-  // Do backend và Codespaces chưa được kết nối đúng cách. Cứ chấp nhận nó bây giờ.
+  // --- Xử lý trạng thái Error (Giữ nguyên) ---
   if (error) {
     console.error("Error fetching laptops:", error); // Log lỗi ra console để debug
     return (
@@ -88,31 +93,33 @@ export default function LaptopsPage() {
     );
   }
 
-  // --- Xử lý khi có Data ---
+  // --- Xử lý khi có Data (Giữ nguyên) ---
   const laptops: Laptop[] = data?.laptops || []; // Lấy dữ liệu hoặc mảng rỗng
 
-  // Hàm định dạng tiền tệ (tùy chọn)
+  // Hàm định dạng tiền tệ (Giữ nguyên)
   const formatCurrency = (value: number) => {
       return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
   };
 
-  // --- Render UI chính ---
+  // --- Render UI chính (Đã cập nhật Table) ---
   return (
     <div className="container mx-auto p-4">
-      {/* Tiêu đề và nút Add */}
+      {/* Tiêu đề và nút Add (giữ nguyên) */}
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Manage Laptops</h1>
-        <Button asChild> {/* asChild để Button hoạt động như Link */}
+        <Button asChild>
           <Link href="/laptops/new">Add New Laptop</Link>
         </Button>
       </div>
 
-      {/* Bảng dữ liệu */}
+      {/* Bảng dữ liệu - ĐÃ CẬP NHẬT */}
       <div className="border rounded-md">
         <Table>
           <TableCaption>A list of available laptops for rent.</TableCaption>
           <TableHeader>
             <TableRow>
+              {/* Thêm cột Image */}
+              <TableHead className="w-[100px]">Image</TableHead>
               <TableHead className="w-[200px]">Name</TableHead>
               <TableHead>Configuration</TableHead>
               <TableHead className="text-right">Price/Hour (VND)</TableHead>
@@ -123,18 +130,33 @@ export default function LaptopsPage() {
               laptops.map((laptop) => (
                 <TableRow
                     key={laptop.id}
-                    onClick={() => handleRowClick(laptop.id)} // Gọi hàm khi click
-                    className="cursor-pointer hover:bg-muted/50" // Style con trỏ + hover
+                    onClick={() => handleRowClick(laptop.id)}
+                    className="cursor-pointer hover:bg-muted/50"
                 >
+                  {/* Thêm Cell hiển thị Image */}
+                  <TableCell>
+                    {laptop.imageUrl ? (
+                      <img
+                        src={laptop.imageUrl}
+                        alt={laptop.name}
+                        className="h-16 w-24 rounded-md object-contain border bg-white" // CSS cho ảnh
+                      />
+                    ) : (
+                      // Placeholder nếu không có ảnh
+                      <div className="h-16 w-24 rounded-md bg-secondary flex items-center justify-center text-xs text-muted-foreground">
+                        No Image
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell className="font-medium">{laptop.name}</TableCell>
                   <TableCell>{laptop.configuration}</TableCell>
                   <TableCell className="text-right">{formatCurrency(laptop.pricePerHour)}</TableCell>
                 </TableRow>
               ))
             ) : (
-               // Trường hợp không có dữ liệu
+               // Cập nhật colSpan thành 4
                <TableRow>
-                  <TableCell colSpan={3} className="h-24 text-center">
+                  <TableCell colSpan={4} className="h-24 text-center">
                     No laptops found.
                   </TableCell>
                </TableRow>

@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation'; // Hooks để lấy params và điều hướng
 import { useQuery, useMutation } from '@apollo/client';
 import Link from 'next/link';
-import { GET_LAPTOP_BY_ID, DELETE_LAPTOP } from '@/lib/graphqlQueries'; // Import queries/mutations
+import { GET_LAPTOP_BY_ID, DELETE_LAPTOP, GET_LAPTOPS } from '@/lib/graphqlQueries'; // Import queries/mutations - Thêm GET_LAPTOPS nếu cần refetch sau xóa
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -29,14 +29,15 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
 import { toast } from "sonner"; // Import toast từ sonner đã cài
 
-// Định nghĩa kiểu Laptop (có thể tạo file riêng nếu dùng nhiều nơi)
+// Định nghĩa kiểu Laptop (đã thêm imageUrl)
 interface Laptop {
     id: string;
     name: string;
     configuration: string;
     pricePerHour: number;
-    createdAt?: string; // Thêm nếu query có lấy
-    updatedAt?: string; // Thêm nếu query có lấy
+    imageUrl?: string; // Đã thêm
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 export default function LaptopDetailPage() {
@@ -57,32 +58,46 @@ export default function LaptopDetailPage() {
             toast.success(`Laptop ${data.deleteLaptop?.id || ''} deleted successfully!`);
             // Xóa thành công, quay về trang danh sách
             router.push('/laptops');
-            // Optional: Cập nhật cache Apollo để xóa item khỏi list ngay lập tức
-            // client.refetchQueries({ include: [GET_LAPTOPS] }); // Hoặc dùng update cache trực tiếp
+            // Cập nhật cache Apollo sau khi xóa (quan trọng để list tự cập nhật)
+            // Cách 1: Dùng refetchQueries (đơn giản nhất)
+            // Cần import GET_LAPTOPS
+            // }, { refetchQueries: [{ query: GET_LAPTOPS }] }); // <-- Thêm vào options của useMutation
+             // Cách 2: Cập nhật cache thủ công (linh hoạt hơn)
+             // }, { update(cache) { // <-- Thêm update vào options của useMutation
+             //       cache.evict({ id: cache.identify({ __typename: 'Laptop', id: id }) });
+             //       cache.gc();
+             //   }});
         },
         onError: (error) => {
             console.error("Error deleting laptop:", error);
             toast.error(`Failed to delete laptop: ${error.message}`);
         },
-        // Cập nhật cache Apollo sau khi xóa (cách khác)
-        // update(cache) {
-        //    cache.evict({ id: cache.identify({ __typename: 'Laptop', id: id }) });
-        //    cache.gc();
-        // }
+         // Nên thêm refetchQueries hoặc update cache vào options của useMutation ở trên
+         // Ví dụ dùng refetchQueries:
+         refetchQueries: [{ query: GET_LAPTOPS }], // Refetch list sau khi xoá
   });
 
-  // --- Xử lý trạng thái Loading ---
+  // --- Xử lý trạng thái Loading (Đã cập nhật Skeleton) ---
   if (loading) {
     return (
         <div className="container mx-auto p-4">
-            <Card className="w-full max-w-md mx-auto">
+            <Card className="w-full max-w-lg mx-auto"> {/* Sửa max-w-md thành max-w-lg */}
                 <CardHeader>
-                     <Skeleton className="h-6 w-3/4 mb-2" />
-                     <Skeleton className="h-4 w-1/2" />
+                    <Skeleton className="h-6 w-3/4 mb-2" />
+                    <Skeleton className="h-4 w-1/2" />
                 </CardHeader>
-                <CardContent className="space-y-2">
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-2/3" />
+                <CardContent className="space-y-4"> {/* Tăng space nếu cần */}
+                    {/* Thêm Skeleton cho ảnh */}
+                    <Skeleton className="h-48 w-full rounded-md" />
+                    {/* Giữ Skeleton cho text */}
+                    <div className='space-y-2'>
+                        <Skeleton className="h-4 w-1/4" />
+                        <Skeleton className="h-4 w-full" />
+                    </div>
+                     <div className='space-y-2'>
+                        <Skeleton className="h-4 w-1/4" />
+                        <Skeleton className="h-4 w-2/3" />
+                    </div>
                 </CardContent>
                 <CardFooter className="flex justify-end space-x-2">
                     <Skeleton className="h-10 w-20" />
@@ -94,21 +109,20 @@ export default function LaptopDetailPage() {
   }
 
   // --- Xử lý trạng thái Error ---
-  if (error) {
-    console.error("Error fetching laptop details:", error);
-    return (
-      <div className="container mx-auto p-4 text-center">
-        <h1 className="text-xl font-semibold mb-4">Error</h1>
-        <p className="text-red-500 mb-4">
-          Could not load laptop details: {error.message}
-        </p>
-        <Button onClick={() => router.back()}>Go Back</Button>
-      </div>
-    );
-  }
+   if (error) {
+     console.error("Error fetching laptop details:", error);
+     return (
+       <div className="container mx-auto p-4 text-center">
+         <h1 className="text-xl font-semibold mb-4">Error</h1>
+         <p className="text-red-500 mb-4">
+           Could not load laptop details: {error.message}
+         </p>
+         <Button onClick={() => router.back()}>Go Back</Button>
+       </div>
+     );
+   }
 
   // --- Xử lý Not Found hoặc Data chưa sẵn sàng (sau khi hết loading/error) ---
-  // Kiểm tra này đảm bảo data và data.laptop tồn tại trước khi dùng
   if (!data?.laptop) {
     return (
       <div className="container mx-auto p-4 text-center">
@@ -124,8 +138,8 @@ export default function LaptopDetailPage() {
 
   // Hàm thực hiện xóa
   const handleDelete = () => {
-    if (!id) return; // Không nên xảy ra nếu đã qua các bước trên
-    deleteLaptopMutation(); // Gọi mutation đã cấu hình sẵn id
+    if (!id) return;
+    deleteLaptopMutation();
   };
 
    // Hàm định dạng tiền tệ
@@ -133,31 +147,41 @@ export default function LaptopDetailPage() {
        return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
    };
 
-  // --- Render UI chính ---
+  // --- Render UI chính (Đã cập nhật CardContent) ---
   return (
     <div className="container mx-auto p-4">
-      <Card className="w-full max-w-lg mx-auto"> {/* Cho card to hơn chút */}
+      <Card className="w-full max-w-lg mx-auto">
         <CardHeader>
           <CardTitle className="text-2xl">{laptop.name}</CardTitle>
           <CardDescription>ID: {laptop.id}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-2">
-          <div>
-              <p className="text-sm font-medium text-muted-foreground">Configuration</p>
-              <p>{laptop.configuration}</p>
-          </div>
-           <div>
-              <p className="text-sm font-medium text-muted-foreground">Price per Hour</p>
-              <p>{formatCurrency(laptop.pricePerHour)}</p>
-          </div>
-          {/* Hiển thị thêm createdAt/updatedAt nếu muốn */}
-          {/* <div className="text-xs text-muted-foreground pt-4">
-              <p>Created: {new Date(laptop.createdAt!).toLocaleString()}</p>
-              <p>Updated: {new Date(laptop.updatedAt!).toLocaleString()}</p>
-          </div> */}
+        {/* --- CardContent ĐÃ CẬP NHẬT --- */}
+        <CardContent className="space-y-4 pt-4">
+            {/* Thêm phần hiển thị ảnh */}
+            {laptop.imageUrl && ( // Chỉ hiển thị nếu có imageUrl
+                <div className="mb-4 border rounded-md overflow-hidden"> {/* Thêm border + overflow */}
+                    <img
+                        src={laptop.imageUrl}
+                        alt={`Image of ${laptop.name}`}
+                        className="w-full h-auto max-h-64 object-contain bg-white" // CSS cho ảnh chi tiết
+                    />
+                </div>
+            )}
+
+            {/* Giữ lại phần hiển thị text */}
+            <div>
+                <p className="text-sm font-medium text-muted-foreground">Configuration</p>
+                <p>{laptop.configuration}</p>
+            </div>
+            <div>
+                <p className="text-sm font-medium text-muted-foreground">Price per Hour</p>
+                <p>{formatCurrency(laptop.pricePerHour)}</p>
+            </div>
+            {/* Phần hiển thị createdAt/updatedAt (nếu có) giữ nguyên */}
         </CardContent>
+        {/* ----------------------------- */}
         <CardFooter className="flex justify-end space-x-2">
-          {/* Nút Edit - Link tới trang edit (sẽ tạo sau) */}
+          {/* Nút Edit - Link tới trang edit */}
           <Button variant="outline" asChild>
              <Link href={`/laptops/${laptop.id}/edit`}>Edit</Link>
           </Button>

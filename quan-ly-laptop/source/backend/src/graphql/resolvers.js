@@ -58,6 +58,7 @@ const resolvers = {
           name: input.name,
           configuration: input.configuration,
           pricePerHour: input.pricePerHour,
+          imageUrl: input.imageUrl
         });
         // Lưu vào database
         await newLaptop.save();
