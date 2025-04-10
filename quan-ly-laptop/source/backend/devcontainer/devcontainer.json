@@ -1,0 +1,14 @@
+{
+  "name": "Node.js & MongoDB (Compose)",
+  "dockerComposeFile": "docker-compose.yml", // Sử dụng file compose
+  "service": "app", // Chạy VS Code trong service 'app'
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}", // Thư mục làm việc
+  "forwardPorts": [4000, 3000], // Forward cổng backend, frontend
+  "postCreateCommand": "cd source/backend && npm install && cd ../frontend && npm install", // Cài đặt dependencies cho cả hai
+  "customizations": { // Giữ lại nếu muốn
+     "vscode": {
+       "settings": {},
+       "extensions": [ "dbaeumer.vscode-eslint", "esbenp.prettier-vscode", "apollographql.vscode-apollo" ]
+     }
+  }
+}

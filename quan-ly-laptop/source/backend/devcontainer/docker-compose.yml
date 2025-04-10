@@ -1,0 +1,17 @@
+# .devcontainer/docker-compose.yml
+version: '3.8'
+services:
+  app: # Service chứa code Node.js của bạn
+    image: mcr.microsoft.com/devcontainers/typescript-node:18
+    volumes:
+      - ..:/workspaces/${localWorkspaceFolderBasename}:cached
+    command: sleep infinity
+    depends_on:
+      - mongo
+  mongo: # Service chạy MongoDB
+    image: mongo:latest
+    restart: unless-stopped
+    volumes:
+      - mongodb_data:/data/db
+volumes:
+  mongodb_data:
