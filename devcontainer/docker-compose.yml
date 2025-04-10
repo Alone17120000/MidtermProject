@@ -1,1 +1,18 @@
-
+version: '3.8'
+services:
+  app:
+    image: mcr.microsoft.com/devcontainers/typescript-node:18 # Image cho Node.js
+    volumes:
+      - ..:/workspaces/${localWorkspaceFolderBasename}:cached
+    # Giữ container chạy
+    command: sleep infinity
+    # Phụ thuộc vào mongo, nhưng không đảm bảo mongo sẵn sàng 100%
+    depends_on:
+      - mongo
+  mongo:
+    image: mongo:latest # Image MongoDB chính thức
+    restart: unless-stopped
+    volumes:
+      - mongodb_data:/data/db # Lưu dữ liệu MongoDB
+volumes:
+  mongodb_data:
